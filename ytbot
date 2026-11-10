@@ -1,0 +1,60 @@
+#!/usr/bin/env bash
+# Boty dolandyrmak üçin ýönekeý komanda.  Mysal: ytbot update
+set -euo pipefail
+APP_DIR="/opt/ytbot"
+APP_USER="ytbot"
+AS_BOT=(runuser -u "$APP_USER" --)
+
+if [ "$(id -u)" -ne 0 ]; then exec sudo "$0" "$@"; fi
+cd "$APP_DIR"
+
+edit_file() {  # faýly nano bilen açýar, eýeligini we rugsatlaryny düzedýär
+  nano "$1"
+  chown "$APP_USER:$APP_USER" "$1" 2>/dev/null || true
+  chmod 600 "$1" 2>/dev/null || true
+}
+
+case "${1:-help}" in
+  update)
+    echo ">>> GitHub-dan täze kod alynýar..."
+    "${AS_BOT[@]}" git pull --ff-only
+    echo ">>> Kitaphanalar täzelenýär (yt-dlp hem)..."
+    "${AS_BOT[@]}" venv/bin/pip install -q -r requirements.txt
+    "${AS_BOT[@]}" venv/bin/pip install -q -U yt-dlp
+    install -m 755 "$APP_DIR/ytbot" /usr/local/bin/ytbot
+    systemctl restart ytbot
+    sleep 2
+    systemctl --no-pager --lines=5 status ytbot || true
+    echo ">>> ✅ Täzelendi!"
+    ;;
+  restart) systemctl restart ytbot; echo "Täzeden işledildi."; ;;
+  start)   systemctl start ytbot;   echo "Işledildi."; ;;
+  stop)    systemctl stop ytbot;    echo "Duruzyldy."; ;;
+  status)  systemctl --no-pager status ytbot || true ;;
+  logs)    journalctl -u ytbot -n 100 -f ;;
+  config)  edit_file .env; systemctl restart ytbot; echo "Saklandy we täzeden işledildi." ;;
+  credentials)
+    echo "credentials.json mazmunyny goýuň (Ctrl+Shift+V), soň Ctrl+O, Enter, Ctrl+X."
+    sleep 2; edit_file credentials.json ;;
+  cookies)
+    echo "cookies.txt mazmunyny goýuň, soň Ctrl+O, Enter, Ctrl+X."
+    sleep 2; edit_file cookies.txt; systemctl restart ytbot ;;
+  auth)
+    "${AS_BOT[@]}" venv/bin/python auth_google.py
+    systemctl restart ytbot ;;
+  *)
+    cat <<'HELP'
+Ulanylyşy: ytbot <komanda>
+
+  update       GitHub-dan täze kody alyp, boty täzeläp işledýär
+  restart      boty täzeden işledýär
+  start/stop   boty işledýär / duruzýar
+  status       bot işleýärmi?
+  logs         botuň ýazgylary (çykmak: Ctrl+C)
+  config       .env sazlamalaryny üýtgetmek
+  credentials  Google credentials.json goýmak
+  auth         Google akkauntyna rugsat bermek
+  cookies      YouTube cookies.txt goýmak (blok bolsa)
+HELP
+    ;;
+esac

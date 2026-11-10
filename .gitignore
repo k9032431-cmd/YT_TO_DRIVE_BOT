@@ -1,0 +1,11 @@
+# Gizlin faýllar — HIÇ HAÇAN GitHub-a goýmaly däl!
+.env
+credentials.json
+token.json
+cookies.txt
+folder_id.txt
+
+venv/
+__pycache__/
+*.pyc
+downloads/
