@@ -15,9 +15,13 @@ if [ "$(id -u)" -ne 0 ]; then
 fi
 
 echo ">>> 1/5  Gerekli programmalar gurnalýar (git, python, ffmpeg)..."
+echo "    ⏳ Bu 3-10 minut alyp biler. Ýazgylar akýan bolsa — hemme zat kadaly, garaşyň."
 export DEBIAN_FRONTEND=noninteractive
-apt-get update -qq
-apt-get install -y -qq git python3 python3-venv python3-pip ffmpeg nano ca-certificates >/dev/null
+# Täze serwerde awtomatik täzelenme işleýän bolsa, gutarmagyna garaşýarys (10 minuda çenli)
+APT_OPTS=(-o DPkg::Lock::Timeout=600 -o Dpkg::Use-Pty=0)
+apt-get "${APT_OPTS[@]}" update
+apt-get "${APT_OPTS[@]}" install -y --no-install-recommends \
+  git python3 python3-venv python3-pip ffmpeg nano ca-certificates curl
 
 echo ">>> 2/5  Kod GitHub-dan alynýar..."
 if [ -d "$APP_DIR/.git" ]; then
