@@ -159,7 +159,7 @@ def setup_hint() -> str:
     return (
         "⚙️ Indiki ädim: Google Drive-y birikdirmek.\n"
         "Google Cloud-dan alan credentials.json faýlyny şu ýere FAÝL edip iberiň "
-        "(📎 → Faýl). README-de nähili almalydygy ýazylan."
+        "(📎 → Faýl).\nÝa-da Client ID we Client secret (GOCSPX-...) kodlaryny hat edip iberiň."
     )
 
 
@@ -328,6 +328,39 @@ async def handle_document(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     await update.message.reply_text("Bu faýly tanamadym. credentials.json ýa-da cookies.txt iberiň.")
 
 
+CLIENT_ID_RE = re.compile(r"[0-9]+-[a-z0-9]+\.apps\.googleusercontent\.com")
+SECRET_RE = re.compile(r"GOCSPX-[A-Za-z0-9_\-]+")
+partial_client: dict = {}   # user_id -> {"id": ..., "secret": ...}
+
+
+async def handle_client_text(update: Update, text: str) -> None:
+    """Client ID we secret-i hatdan alyp credentials.json döredýär."""
+    uid = update.effective_user.id
+    part = partial_client.setdefault(uid, {})
+    if m := CLIENT_ID_RE.search(text):
+        part["id"] = m.group(0)
+    if m := SECRET_RE.search(text):
+        part["secret"] = m.group(0)
+    if "id" not in part:
+        await update.message.reply_text("✅ Secret alyndy. Indi Client ID-ni hem iberiň (...apps.googleusercontent.com).")
+        return
+    if "secret" not in part:
+        await update.message.reply_text("✅ Client ID alyndy. Indi Client secret-i hem iberiň (GOCSPX- bilen başlaýar).")
+        return
+    info = {"installed": {
+        "client_id": part["id"],
+        "client_secret": part["secret"],
+        "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+        "token_uri": "https://oauth2.googleapis.com/token",
+        "redirect_uris": ["http://localhost"],
+    }}
+    drive.CREDENTIALS_FILE.write_text(json.dumps(info))
+    os.chmod(drive.CREDENTIALS_FILE, 0o600)
+    partial_client.pop(uid, None)
+    await update.message.reply_text("✅ Client ID we secret kabul edildi!")
+    await send_auth_link(update)
+
+
 # ---------------- Hatlar ----------------
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -354,6 +387,11 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         await update.message.reply_text(
             "🎉 Google Drive birikdirildi! Indi islendik YouTube ssylkasyny iberiň."
         )
+        return
+
+    # credentials.json faýly ýerine Client ID we Client secret hat edip iberilse
+    if is_owner(update) and (CLIENT_ID_RE.search(text) or SECRET_RE.search(text)):
+        await handle_client_text(update, text)
         return
 
     match = YOUTUBE_RE.search(text)
