@@ -4,6 +4,7 @@ credentials.json
 token.json
 cookies.txt
 folder_id.txt
+users.txt
 
 venv/
 __pycache__/

@@ -41,6 +41,21 @@ if [ ! -f "$APP_DIR/.env" ]; then
   chmod 600 "$APP_DIR/.env"
 fi
 
+# --- Telegram tokenini soramak (telefondan hem aňsat bolar ýaly) ---
+if grep -q "sizin-tokeniniz" "$APP_DIR/.env"; then
+  TOKEN="${BOT_TOKEN:-}"
+  while [ -z "$TOKEN" ]; do
+    echo
+    echo "👉 @BotFather-den alan TOKENIŇIZI şu ýere goýuň we Enter basyň:"
+    read -r TOKEN < /dev/tty || true
+    TOKEN="$(echo "$TOKEN" | tr -d '[:space:]')"
+    if ! echo "$TOKEN" | grep -Eq '^[0-9]+:[A-Za-z0-9_-]{30,}$'; then
+      echo "❌ Bu token däl ýaly (mysal: 123456789:AAH...). Täzeden synanyşyň."; TOKEN=""
+    fi
+  done
+  sed -i "s|^TELEGRAM_BOT_TOKEN=.*|TELEGRAM_BOT_TOKEN=$TOKEN|" "$APP_DIR/.env"
+fi
+
 echo ">>> 5/5  Awtomatik işleýän hyzmat (systemd) we 'ytbot' komandasy goşulýar..."
 cat > /etc/systemd/system/ytbot.service <<UNIT
 [Unit]
@@ -61,18 +76,16 @@ UNIT
 install -m 755 "$APP_DIR/ytbot" /usr/local/bin/ytbot
 systemctl daemon-reload
 systemctl enable ytbot >/dev/null 2>&1
+systemctl restart ytbot
 
 cat <<'MSG'
 
 =====================================================================
- ✅ Gurnaldy! Indi şu ädimleri ediň (README.md-de giňişleýin bar):
+ ✅ GURNALDY! Bot işleýär.
 
-   ytbot config        -> Telegram tokeni we ID-ňizi ýazyň
-   ytbot credentials   -> Google-dan alan credentials.json-y goýuň
-   ytbot auth          -> Google akkauntyňyza rugsat beriň
-   ytbot restart       -> boty işlediň
-   ytbot logs          -> bot näme edýär, görüň
+ Indi Telegrama geçiň, botuňyzy açyň we  /start  ýazyň.
+ Galan ähli zady bot özi düşündirer. Serwere gaýdyp girmek gerek däl.
 
- Soňra täze zat goşulanda diňe:   ytbot update
+ Täzelemek: Telegramda botuňyza  /update  ýazyň.
 =====================================================================
 MSG
