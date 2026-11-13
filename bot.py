@@ -339,6 +339,7 @@ async def handle_client_text(update: Update, text: str) -> None:
     part = partial_client.setdefault(uid, {})
     if m := CLIENT_ID_RE.search(text):
         part["id"] = m.group(0)
+        text = text.replace(m.group(0), " ")  # ýelmeşen bolsa secret-den aýyrmak üçin
     if m := SECRET_RE.search(text):
         part["secret"] = m.group(0)
     if "id" not in part:
@@ -455,6 +456,10 @@ def main() -> None:
     app.add_handler(CommandHandler("adduser", cmd_adduser))
     app.add_handler(CommandHandler("deluser", cmd_deluser))
     app.add_handler(MessageHandler(filters.Document.ALL, handle_document))
+    # "/GOCSPX-..." ýaly "/" bilen başlanan kodlar hem kabul edilsin
+    app.add_handler(MessageHandler(
+        filters.TEXT & filters.Regex(r"GOCSPX-|apps\.googleusercontent\.com"), handle_message
+    ))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
 
     log.info("Bot işe başlady.")
