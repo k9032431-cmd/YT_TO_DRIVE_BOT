@@ -38,7 +38,7 @@ echo ">>> 4/5  Python kitaphanalary gurnalýar..."
 runuser -u "$APP_USER" -- git -C "$APP_DIR" pull --ff-only || true
 runuser -u "$APP_USER" -- python3 -m venv "$APP_DIR/venv"
 runuser -u "$APP_USER" -- "$APP_DIR/venv/bin/pip" install -q --upgrade pip
-runuser -u "$APP_USER" -- "$APP_DIR/venv/bin/pip" install -q -r "$APP_DIR/requirements.txt"
+runuser -u "$APP_USER" -- "$APP_DIR/venv/bin/pip" install --progress-bar off -r "$APP_DIR/requirements.txt"
 if [ ! -f "$APP_DIR/.env" ]; then
   cp "$APP_DIR/.env.example" "$APP_DIR/.env"
   chown "$APP_USER:$APP_USER" "$APP_DIR/.env"
